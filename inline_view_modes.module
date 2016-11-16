@@ -1,0 +1,5 @@
+<?php
+
+/**
+ * Provide view mode selection on referenced entities.
+ */

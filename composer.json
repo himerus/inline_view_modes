@@ -1,0 +1,19 @@
+{
+  "name": "himerus/inline_view_modes",
+  "description": "Inline View Modes",
+  "type": "drupal-module",
+  "homepage": "https://github.com/himerus/inline_view_modes",
+  "authors": [
+    {
+      "name": "Jake Strawn",
+      "role": "Maintainer",
+      "homepage": "https://github.com/himerus"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/himerus/inline_view_modes/issues",
+    "source": "https://github.com/himerus/inline_view_modes"
+  },
+  "license": "GPL-2.0+",
+  "require": { }
+}
