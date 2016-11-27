@@ -1,5 +1,332 @@
 <?php
 
 /**
+ * @file
  * Provide view mode selection on referenced entities.
+ *
+ * The Inline View Modes module will allow on entity reference fields the
+ * ability to select a view mode to render the entity rather than the default
+ * provided by the Manage Display settings.
+ *
+ * Integrations:
+ * - entity_reference
+ * - entity_reference_revisions
+ * - @todo: inline_entity_form
  */
+
+use \Drupal\Core\Form\FormStateInterface;
+use \Drupal\node\Entity\Node;
+use \Drupal\field\Entity\FieldConfig;
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Generic hook_form_alter, primarily used for testing prior to converting to a
+ * more specific hook_form_FORM_ID_alter or hook_form_BASE_FORM_ID_alter.
+ */
+function inline_view_modes_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ *
+ * Implementations are responsible for adding cache contexts/tags/max-age as
+ * needed. See https://www.drupal.org/developing/api/8/cache.
+ *
+ * By default, when \Drupal::formBuilder()->getForm() is called, Drupal looks
+ * for a function with the same name as the form ID, and uses that function to
+ * build the form. In contrast, base forms allow multiple form IDs to be mapped
+ * to a single base (also called 'factory') form function.
+ *
+ * Modules can implement hook_form_BASE_FORM_ID_alter() to modify a specific
+ * base form, rather than implementing hook_form_alter() and checking for
+ * conditions that would identify the shared form constructor.
+ *
+ * To identify the base form ID for a particular form (or to determine whether
+ * one exists) check the $form_state. The base form ID is stored under
+ * $form_state->getBuildInfo()['base_form_id'].
+ *
+ * Form alter hooks are called in the following order: hook_form_alter(),
+ * hook_form_BASE_FORM_ID_alter(), hook_form_FORM_ID_alter(). See
+ * hook_form_alter() for more details.
+ *
+ * @see hook_form_alter()
+ * @see hook_form_FORM_ID_alter()
+ * @see \Drupal\Core\Form\FormBuilderInterface::prepareForm()
+ *
+ * @ingroup form_api
+ */
+function inline_view_modes_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Provides functionality to add ThirdPartySetting to appropriate fields for
+ * enabling or disabling Inline View Modes on an entity.
+ */
+function inline_view_modes_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+  /** @var \Drupal\field_ui\Form\FieldConfigEditForm $form_object */
+  $form_object = $form_state->getFormObject();
+  /** @var \Drupal\field\Entity\FieldConfig $field */
+  $field = $form_object->getEntity();
+
+  // Return if we aren't looking at a field that we want.
+  if (!inline_view_modes_is_allowed($field)) {
+    return TRUE;
+  }
+
+  // Add the required Inline View Modes form elements.
+  $form['inline_view_modes'] = array(
+    '#type' => 'details',
+    '#attributes' => array('class' => array('inline_view_modes')),
+    '#description' => t('<strong>Inline View Modes</strong> allows the content creator/editor to manipulate the display of a referenced entity. When setting display settings on the <em>Manage Display</em> tab, if the <strong>Referenced Entity w/View Mode</strong> is selected, the default view mode will be used if a referenced entity fails to specify a specific view mode.</strong>'),
+    '#title' => t('Inline View Modes'),
+    '#weight' => -5,
+    '#open' => TRUE,
+    '#tree' => FALSE,
+  );
+
+  $form['enable_inline_view_modes'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable <strong>Inline View Modes</strong> support.'),
+    '#description' => t('Enable <strong>Inline View Modes</strong> for referenced entities.'),
+    '#default_value' => $field->getThirdPartySetting('inline_view_modes', 'enable_inline_view_modes'),
+    '#group' => 'inline_view_modes',
+  );
+
+  $form['#entity_builders'][] = 'inline_view_modes_add_enable_config';
+}
+
+/**
+ * Entity builder for the field configuration entity.
+ *
+ * Handles saving and removing the ThirdPartySetting on a config entity that
+ * has selected to use (or stop using) Inline View Modes.
+ *
+ * @param string $entity_type
+ *   Type of entity.
+ * @param \Drupal\field\Entity\FieldConfig $field
+ *   Field object.
+ * @param array $form
+ *   Form object array.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   State of current form.
+ */
+function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, &$form, FormStateInterface $form_state) {
+
+  if ($entity_type == 'field_config') {
+    if ($form_state->getValue('enable_inline_view_modes')) {
+      $field->setThirdPartySetting('inline_view_modes', 'enable_inline_view_modes', $form_state->getValue('enable_inline_view_modes'));
+      return;
+    }
+
+    $field->unsetThirdPartySetting('inline_view_modes', 'enable_inline_view_modes');
+  }
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ *
+ * Alters Entity Reference fields to add functionality for selecting view mode.
+ *
+ * AJAX event debugging:
+ * - autocompletechange happens after blur and returns the real value
+ *   of the form element now.
+ *   $target_id = $form_state->getValue(array($field, $delta))['target_id'];
+ *   WORKS to grab correct NEW target_id, but need to solve the blur/select
+ *   issue.
+ *
+ * - autocompleteselect happens when selecting an item IN the
+ *   form element, but returns only the typed string prior to selecting item.
+ *
+ * - autocompleteclose happens when the autocomplete menu closes.
+ *   THIS is the one we want. Doesn't solve the issue with resetting the
+ *   View Mode selector though if removing/deleting a reference.
+ *
+ * @see \Drupal\Core\Field\WidgetBase::formSingleElement()
+ * @see hook_field_widget_WIDGET_TYPE_form_alter()
+ * @see https://www.drupal.org/node/1194484
+ *   for Ajax info on widget forms. (D7)
+ */
+function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
+  // @todo: Investigate ONLY firing on the Rendered Entity widget.
+  $base_form = $form_state->getBuildInfo()['base_form_id'];
+  $form_id = $form_state->getBuildInfo()['form_id'];
+  /** @var \Drupal\node\NodeForm $form_object */
+  $form_object = $form_state->getFormObject();
+  // Parent entity displaying the form.
+  /** @var \Drupal\node\Entity\Node $node */
+  $entity = $form_object->getEntity();
+
+  /** @var \Drupal\field\Entity\FieldConfig $field_config */
+  $field_config = $context['items']->getFieldDefinition();
+  $field_type = $field_config->getType();
+
+  switch ($field_type) {
+    // Support for core entity_reference field.
+    case 'entity_reference':
+      // Support for entity_reference_revisions module.
+    case 'entity_reference_revisions':
+
+      // @todo: Investigate $field_config issue further.
+      // Sometimes $field_config is of type: \Drupal\field\Entity\FieldConfig
+      // And other times it is of type: \Drupal\Core\Field\BaseFieldDefinition
+      // Hence the method_exists() call to $field_config, 'getThirdPartySetting'
+      if (method_exists($field_config, 'getThirdPartySetting') && $field_config->getThirdPartySetting('inline_view_modes', 'enable_inline_view_modes')) {
+        // Assign the delta value to determine item being iterated.
+        $delta = $context['delta'];
+        /** @var \Drupal\Core\Field\EntityReferenceFieldItemList $items */
+        $items = $context['items'];
+        /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $thisItem */
+        $thisItem = $items->get($delta);
+        $referenced_entity_id = isset($thisItem->getValue()['target_id']) ? $thisItem->getValue()['target_id'] : FALSE;
+
+        // Nothing happening here with getValues();
+        $values = $form_state->getValues();
+
+        $default_value = isset($values['inline_view_mode']) ? $values['inline_view_mode'] : 'default';
+
+        // Alter the target_id field to add the appropriate AJAX handlers.
+        if (isset($element['target_id'])) {
+          $element['target_id']['#prefix'] = '<div id="inline-view-modes-widget-wrapper-' . $delta . '">';
+          $element['target_id']['#suffix'] = '</div>';
+
+          $element['target_id']['#ajax'] = [
+            'event' => 'autocompleteclose',
+            'callback' => 'inline_view_mode_widget_autocomplete_callback',
+            'wrapper' => 'inline-view-modes-wrapper-' . $delta,
+          ];
+        }
+
+        // Add the View Mode field.
+        // @todo: Enable #states and appropriate AJAX needed for FULL functionality.
+        // make two versions, one without states hidden, and if it's an empty
+        // field, hide the form element.
+        $element['inline_view_mode'] = array(
+          '#title' => t('View Mode'),
+          '#prefix' => '<div id="inline-view-modes-wrapper-' . $delta . '">',
+          '#suffix' => '</div>',
+          '#type' => 'select',
+          '#options' => inline_view_modes_view_mode_form_options($referenced_entity_id),
+          // @todo: Find a useful description..
+          '#default_value' => $default_value,
+          '#weight' => 10,
+        );
+      }
+
+      break;
+  }
+}
+
+/**
+ * Callback function for inline_view_modes_field_widget_form_alter.
+ *
+ * Provides callback functionality to grab the appropriate view modes after
+ * and entity has been referenced in an autocomplete field.
+ *
+ * @param array $form
+ *   Form object array.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   State of current form.
+ *
+ * @return mixed
+ *   Returns appropriate portion of $form to rebuild via AJAX.
+ */
+function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface $form_state) {
+  // @todo: Need some error checking/defensive coding in this callback.
+  $triggering_element = $form_state->getTriggeringElement();
+  $delta = $triggering_element['#delta'];
+  $field = $triggering_element['#parents'][0];
+  $target_id = $form_state->getValue(array($field, $delta))['target_id'];
+  $value = $form_state->getValue($field)[$delta];
+  $referenced_entity_id = $value['target_id'];
+
+  // Alter the options in the View Mode selector.
+  $form[$field]['widget'][$delta]['inline_view_mode']['#options'] = inline_view_modes_view_mode_form_options($referenced_entity_id);
+  return $form[$field]['widget'][$delta]['inline_view_mode'];
+}
+
+/**
+ * Function to return valid options for <select> on an Inline View Modes field.
+ *
+ * Given an $entity_id value, determine the allowed / used view modes by the
+ * particular bundle.
+ *
+ * To send an ENTITY_ID to this function, it should either be the entity_id
+ * or FALSE:
+ *
+ * @code
+ * $referenced_entity_id = isset(ENTITY_ID) ? ENTITY_ID : FALSE;
+ * @endcode
+ *
+ * @param int $entity_id
+ *   The Entity ID to gather available options for.
+ *
+ * @return array
+ *   Array of View Modes ready for use in select or checkbox form element.
+ */
+function inline_view_modes_view_mode_form_options($entity_id) {
+
+  if ($entity_id) {
+    // Here we have an existing item. Let's get the right view modes.
+    /** @var \Drupal\node\Entity\Node $referenced_entity */
+    $entity = Node::load($entity_id);
+    $entity_bundle = $entity->getType();
+    $entity_type_id = $entity->getEntityTypeId();
+    $entity_view_modes_by_bundle = \Drupal::entityManager()->getViewModeOptionsByBundle($entity_type_id, $entity_bundle);
+    return $entity_view_modes_by_bundle;
+  }
+  // Provide 'default' view mode as default, then additional appropriate
+  // view modes as needed to the array.
+  return [
+    'default' => 'Default',
+  ];
+}
+
+/**
+ * Function to return TRUE/FALSE if Inline View Modes are allowed.
+ *
+ * Custom function to check $field against an array of $allowed_types and
+ * $allowed_target_types to determine if the field is capable/allowed to use
+ * Inline View Modes.
+ *
+ * Possible future additions to $allowed_target_types:
+ * - comment -> Comment
+ * - block_content -> Custom Block
+ * - node -> Content
+ * - content_moderation_state -> Content moderation state
+ * - taxonomy_term -> Taxonomy term
+ * - user -> User
+ * - paragraph -> Paragraph
+ *
+ * @param \Drupal\field\Entity\FieldConfig $field
+ *   Field entity used to determine if Inline View Modes is enabled.
+ *
+ * @todo: Make $allowed_target_types configurable.
+ * @todo: Integrate permissions?
+ * @todo: Expand $allowed_target_types available.
+ *
+ * @return bool
+ *   If Inline View Modes is allowed or not.
+ */
+function inline_view_modes_is_allowed(FieldConfig $field) {
+  // Allowed target entity types.
+  $allowed_target_types = [
+    'node',
+  ];
+  // Allowed field types capable of adding Inline View Modes functionality to.
+  $allowed_types = [
+    'entity_reference',
+    'entity_reference_revisions',
+  ];
+  if (in_array($field->getType(), $allowed_types) && in_array($field->getSetting('target_type'), $allowed_target_types)) {
+    // Return TRUE if we found a field type/target type that we want.
+    return TRUE;
+  }
+  // Return FALSE if this isn't in our allowed values arrays.
+  return FALSE;
+}

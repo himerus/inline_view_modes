@@ -29,7 +29,7 @@ Initial configuration Handled through configuration of Entity Reference Field
 
 ## Permissions
 * `administer inline view modes`
-`use inline view modes`
+* `use inline view modes`
 
 ## Modules to integrate
-* Entity Reference Revisions
+* [Entity Reference Revisions](https://www.drupal.org/project/entity_reference_revisions)
