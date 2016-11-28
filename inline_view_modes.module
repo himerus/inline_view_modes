@@ -202,24 +202,12 @@ function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, &
  * Alters Entity Reference fields to add functionality for selecting view mode.
  *
  * @todo: When setting the default options for entity reference, what about saving the entity id to the db?? (Store a zero as entity id??)
- * AJAX event debugging:
- * - autocompletechange happens after blur and returns the real value
- *   of the form element now.
- *   $target_id = $form_state->getValue(array($field, $delta))['target_id'];
- *   WORKS to grab correct NEW target_id, but need to solve the blur/select
- *   issue.
- *
- * - autocompleteselect happens when selecting an item IN the
- *   form element, but returns only the typed string prior to selecting item.
- *
- * - autocompleteclose happens when the autocomplete menu closes.
- *   THIS is the one we want. Doesn't solve the issue with resetting the
- *   View Mode selector though if removing/deleting a reference.
  *
  * @see \Drupal\Core\Field\WidgetBase::formSingleElement()
  * @see hook_field_widget_WIDGET_TYPE_form_alter()
  * @see https://www.drupal.org/node/1194484
  *   for Ajax info on widget forms. (D7)
+ * @see https://www.drupal.org/node/1775464#comment-11764169
  */
 function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
   // @todo: Investigate ONLY firing on the Rendered Entity widget.
@@ -423,7 +411,8 @@ function inline_view_modes_view_mode_form_options($entity_id) {
  * $allowed_entity_types to determine if the field is capable/allowed to use
  * Inline View Modes.
  *
- * Possible future additions to $allowed_target_types:
+ * Possible future additions to $allowed_parent_entity_types and
+ * $allowed_target_entity_types:
  * - comment -> Comment
  * - block_content -> Custom Block
  * - node -> Content
@@ -432,19 +421,36 @@ function inline_view_modes_view_mode_form_options($entity_id) {
  * - user -> User
  * - paragraph -> Paragraph
  *
+ * The following code demonstrates finding the appropriate parent/target entity.
+ * @code
+ * $parent_entity = $field->getTargetEntityTypeId();
+ * $target_type = $field->getSetting('target_type');
+ * @endcode
+ *
  * @param \Drupal\field\Entity\FieldConfig $field
  *   Field entity used to determine if Inline View Modes is enabled.
  *
- * @todo: Make $allowed_entity_types configurable.
  * @todo: Integrate permissions?
- * @todo: Expand $allowed_entity_types available.
- *
+ * @todo: Expand $allowed_parent_entity_types & $allowed_target_entity_types available.
+ * @todo: Refactor target/parent entity type logic to be more appropriate.
+ *   This should likely be more like the following:
+ *   - IF the PARENT entity allows the entity_reference field, then it shouldn't
+ *     matter or require a check and would be fine to PROCEED.
+ *   - IF the TARGET entity is a Content Entity that allows/has view modes,
+ *     then it should be fine to PROCEED.
+ *   - IF the FIELD type is one of the ones we want, PROCEED.
  * @return bool
  *   If Inline View Modes is allowed or not.
  */
 function inline_view_modes_is_allowed(FieldConfig $field) {
   // Allowed entity types capable of adding Inline View Modes functionality to.
-  $allowed_entity_types = [
+  $allowed_parent_entity_types = [
+    'node',
+    'paragraph',
+  ];
+  // Perhaps target_entity_type check should only determine that the target type
+  // is of the content entity type that HAS view modes?
+  $allowed_target_entity_types = [
     'node',
   ];
   // Allowed field types capable of adding Inline View Modes functionality to.
@@ -452,8 +458,9 @@ function inline_view_modes_is_allowed(FieldConfig $field) {
     'entity_reference',
     'entity_reference_revisions',
   ];
-  if (in_array($field->getType(), $allowed_field_types) && in_array($field->getSetting('target_type'), $allowed_entity_types)) {
-    // Return TRUE if we found a field type/target type that we want.
+
+  if (in_array($field->getType(), $allowed_field_types) && in_array($field->getTargetEntityTypeId(), $allowed_parent_entity_types) && in_array($field->getSetting('target_type'), $allowed_target_entity_types)) {
+    // Return TRUE if we found a field type/parent entity type that we want.
     return TRUE;
   }
   // Return FALSE if this isn't in our allowed values arrays.
