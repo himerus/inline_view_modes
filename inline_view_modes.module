@@ -133,6 +133,20 @@ function inline_view_modes_form_node_form_alter(&$form, FormStateInterface $form
  *
  * Provides functionality to add ThirdPartySetting to appropriate fields for
  * enabling or disabling Inline View Modes on an entity.
+ *
+ * @todo: This is where we will work on the additional configuration for per reference or per field inline view modes.
+ * - This will allow a field to select to add the View Mode to each reference
+ *   added to a multivalue reference field, OR instead only supply a single
+ *   view mode option for a set of multivalue references.
+ * - The use case here is that if you are adding multiple references, it should
+ *   likely be assumed that you would want them all rendered with the same view
+ *   mode if then placing them in a grid, rotator, etc.
+ * - However, if the reference field has multiple types of content to be
+ *   referenced, then it's likely that each item would be a full width,
+ *   standalone item, and then each could reference the appropriate view mode.
+ * - In essense, it makes sense that when creating your entity reference fields
+ *   that you think long and hard about the use case you have, and configure
+ *   appropriately.
  */
 function inline_view_modes_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
 
@@ -459,7 +473,11 @@ function inline_view_modes_is_allowed(FieldConfig $field) {
     'entity_reference_revisions',
   ];
 
-  if (in_array($field->getType(), $allowed_field_types) && in_array($field->getTargetEntityTypeId(), $allowed_parent_entity_types) && in_array($field->getSetting('target_type'), $allowed_target_entity_types)) {
+  $field_type = $field->getType();
+  $parent_entity_type = $field->getTargetEntityTypeId();
+  $target_entity_type = $field->getSetting('target_type');
+
+  if (in_array($field_type, $allowed_field_types) && in_array($parent_entity_type, $allowed_parent_entity_types) && in_array($target_entity_type, $allowed_target_entity_types)) {
     // Return TRUE if we found a field type/parent entity type that we want.
     return TRUE;
   }
