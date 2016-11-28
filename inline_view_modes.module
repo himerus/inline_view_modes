@@ -26,6 +26,10 @@ use \Drupal\field\Entity\FieldConfig;
  */
 function inline_view_modes_form_alter(&$form, FormStateInterface $form_state, $form_id) {
 
+  $submit_handlers = $form_state->getSubmitHandlers();
+  $set_submit_handlers = $form_state->setSubmitHandlers([]);
+
+  $something = '';
 }
 
 /**
@@ -133,6 +137,7 @@ function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, &
  *
  * Alters Entity Reference fields to add functionality for selecting view mode.
  *
+ * @todo: When setting the default options for entity reference, what about saving the entity id to the db?? (Store a zero as entity id??)
  * AJAX event debugging:
  * - autocompletechange happens after blur and returns the real value
  *   of the form element now.
@@ -215,11 +220,43 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
           // @todo: Find a useful description..
           '#default_value' => $default_value,
           '#weight' => 10,
+          '#element_validate' => [
+            'inline_view_modes_field_widget_form_validate',
+          ],
         );
       }
 
       break;
   }
+}
+
+/**
+ * Implements #element_validate for inline_view_modes_field_widget_form_alter.
+ *
+ * @param array $element
+ *   Element array.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   Form state object.
+ */
+function inline_view_modes_field_widget_form_validate($element, FormStateInterface &$form_state) {
+
+  $submit_handlers = $form_state->getSubmitHandlers();
+  if (!in_array('inline_view_modes_field_widget_form_submit', $submit_handlers)) {
+    $submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
+    $form_state->setSubmitHandlers($submit_handlers);
+  }
+}
+
+/**
+ * Submit handler for inline_view_modes_field_widget_form_alter.
+ *
+ * @param array $form
+ *   Form array.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   Form state object.
+ */
+function inline_view_modes_field_widget_form_submit($form, FormStateInterface $form_state) {
+
 }
 
 /**
@@ -280,7 +317,7 @@ function inline_view_modes_view_mode_form_options($entity_id) {
 
   if ($entity_id) {
     // Here we have an existing item. Let's get the right view modes.
-    /** @var \Drupal\node\Entity\Node $referenced_entity */
+    /** @var \Drupal\node\Entity\Node $entity */
     $entity = Node::load($entity_id);
     $entity_bundle = $entity->getType();
     $entity_type_id = $entity->getEntityTypeId();
