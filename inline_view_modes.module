@@ -240,13 +240,20 @@ function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface
   // @todo: Need some error checking/defensive coding in this callback.
   $triggering_element = $form_state->getTriggeringElement();
   $delta = $triggering_element['#delta'];
-  $field = $triggering_element['#parents'][0];
-  $target_id = $form_state->getValue(array($field, $delta))['target_id'];
+  $field = array_shift($triggering_element['#parents']);
   $value = $form_state->getValue($field)[$delta];
   $referenced_entity_id = $value['target_id'];
 
+  // Get the allowed/enabled View Modes for the specific entity.
+  $allowed_view_modes = inline_view_modes_view_mode_form_options($referenced_entity_id);
   // Alter the options in the View Mode selector.
-  $form[$field]['widget'][$delta]['inline_view_mode']['#options'] = inline_view_modes_view_mode_form_options($referenced_entity_id);
+  $form[$field]['widget'][$delta]['inline_view_mode']['#options'] = $allowed_view_modes;
+
+  // Assign the previously assigned default view mode assuming the reference is
+  // of the same type, thus having the same view modes available. Otherwise, we
+  // need to reset it back to default.
+  $default_value = isset($value['inline_view_mode']) && in_array($value['inline_view_mode'], $allowed_view_modes) ? $value['inline_view_mode'] : 'default';
+  $form[$field]['widget'][$delta]['inline_view_mode']['#default_value'] = $default_value;
   return $form[$field]['widget'][$delta]['inline_view_mode'];
 }
 
