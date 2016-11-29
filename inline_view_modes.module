@@ -462,11 +462,8 @@ function inline_view_modes_is_allowed(FieldConfig $field) {
     'node',
     'paragraph',
   ];
-  // Perhaps target_entity_type check should only determine that the target type
-  // is of the content entity type that HAS view modes?
-  $allowed_target_entity_types = [
-    'node',
-  ];
+  // Array of content entities with view modes.
+  $allowed_target_entity_types = inline_view_modes_get_entities_with_view_modes();
   // Allowed field types capable of adding Inline View Modes functionality to.
   $allowed_field_types = [
     'entity_reference',
@@ -483,4 +480,26 @@ function inline_view_modes_is_allowed(FieldConfig $field) {
   }
   // Return FALSE if this isn't in our allowed values arrays.
   return FALSE;
+}
+
+
+/**
+ * Function to return an array of entity type ids that contain view modes.
+ *
+ * @return array $content_entities_with_view_modes
+ *   An array containing all content entities that register view modes, keyed
+ *   by entity_id.
+ */
+function inline_view_modes_get_entities_with_view_modes() {
+  $entity_types = \Drupal::entityManager()->getDefinitions();
+  $content_entities_with_view_modes = [];
+  foreach ($entity_types as $id => $entity_type) {
+    if ($entity_type->getGroup() == 'content') {
+      $entity_view_modes = \Drupal::entityManager()->getViewModes($id);
+      if (count($entity_view_modes) > 0) {
+        $content_entities_with_view_modes[$id] = $id;
+      }
+    }
+  }
+  return $content_entities_with_view_modes;
 }
