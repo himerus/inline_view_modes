@@ -1,3 +1,5 @@
+[ivm-form-selects]: ./images/screenshots/inline_view_modes--select.png "View modes per entity reference. With support for mutliple target entity types offering different view modes."
+[ivm-field-config]: ./images/screenshots/inline_view_modes--field-config.png "Configuration available to Entity Reference fields."
 # Inline View Modes 
 
 ## Purpose
@@ -18,14 +20,20 @@ So the problem exists that you could be referencing two node types that don't sh
 ## Field Configuration Options
 Provides functionality to add ThirdPartySetting to appropriate fields for enabling or disabling Inline View Modes on an entity.
 
+![alt text][ivm-field-config]
+
 The field configuration is handled via the `inline_view_modes_form_field_config_edit_form_alter()` function.
 
 The storage of the configuration is handled via `inline_view_modes_add_enable_config()`.
 
 ### Proposed Features
 #### Enable View mode selection PER reference
-**Status:** _In progress_.
 > Each referenced entity in a multiple value field can select a different view mode.
+
+![alt text][ivm-form-selects]
+
+**Status:** _In progress_.
+
 
 #### Enable View mode selection PER field.
 **Status:** _To be developed_.

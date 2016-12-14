@@ -14,6 +14,7 @@
  * - @todo: inline_entity_form
  */
 
+use Drupal\Core\Entity\Entity;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Field\WidgetInterface;
@@ -201,11 +202,13 @@ function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, &
 
   if ($entity_type == 'field_config') {
     if ($form_state->getValue('enable_inline_view_modes')) {
+      // Turn ON Inline View Modes for this field.
       $field->setThirdPartySetting('inline_view_modes', 'enable_inline_view_modes', $form_state->getValue('enable_inline_view_modes'));
-      // @todo: Potential to update the default formatter here if enabled.
+      // @todo: Potential to update the default formatter here if possible.
       return;
     }
 
+    // Turn OFF Inline View Modes for this field.
     $field->unsetThirdPartySetting('inline_view_modes', 'enable_inline_view_modes');
   }
 }
@@ -252,14 +255,59 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
         $delta = $context['delta'];
         /** @var \Drupal\Core\Field\EntityReferenceFieldItemList $items */
         $items = $context['items'];
+        $field_name = $items->getName();
         /** @var \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem $thisItem */
         $thisItem = $items->get($delta);
-        $referenced_entity_id = isset($thisItem->getValue()['target_id']) ? $thisItem->getValue()['target_id'] : FALSE;
 
-        // Nothing happening here with getValues();
+        // Happens AFTER a first pass where values are empty.
         $values = $form_state->getValues();
 
-        $default_value = isset($values['inline_view_mode']) ? $values['inline_view_mode'] : 'default';
+        // @todo: Getting the referenced entity ID fails in many scenarios.
+
+        // Grab the Entity Id for the STORED item.
+        $referenced_entity_id = isset($thisItem->getValue()['target_id']) ? $thisItem->getValue()['target_id'] : FALSE;
+
+        // An empty reference field has been filled out, or has been changed.
+        if (isset($values[$field_name][$delta]['target_id'])) {
+            $referenced_entity_id = $values[$field_name][$delta]['target_id'];
+            $default_value = isset($values[$field_name][$delta]['inline_view_mode']) ? $values[$field_name][$delta]['inline_view_mode'] : 'default';
+        }
+        else {
+          // @todo: When in Paragraphs, values are under [$parent_paragraph_field][$delta]['subform'][$field_name]
+          // Going to require additional items to figure out here.
+          $default_value = isset($values[$field_name][$delta]['inline_view_mode']) ? $values[$field_name][$delta]['inline_view_mode'] : 'default';
+        }
+
+        $entity_data = FALSE;
+        if ($referenced_entity_id) {
+          // @todo: Assign some functionality to ensure the Entity ID is found if it exists.
+          $entity_data = inline_view_modes_get_entity_type($referenced_entity_id);
+        }
+
+        $title = t('View Mode');
+        $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>'. $entity_data['label'] . '</strong></em>, <em>'. $entity_data['title'] . '</em>.') : t('Enter a reference first...');
+        $field_parents = isset($element['target_id']['#field_parents']) ? $element['target_id']['#field_parents'] : [];
+
+        // Add the View Mode field.
+        // @todo: Enable #states and appropriate AJAX needed for FULL functionality.
+        // make two versions, one without states hidden, and if it's an empty
+        // field, hide the form element.
+        $element['inline_view_mode'] = array(
+          '#title' => $title,
+          '#prefix' => '<div id="inline-view-modes-wrapper-' . $delta . '">',
+          '#suffix' => '</div>',
+          '#type' => 'select',
+          '#delta' => $delta,
+          '#options' => inline_view_modes_view_mode_form_options($referenced_entity_id),
+          // @todo: Find a useful description..
+          '#description' => $description,
+          '#default_value' => $default_value,
+          '#field_parents' => $field_parents,
+          '#weight' => 10,
+          '#element_validate' => [
+            //'inline_view_modes_field_widget_form_validate',
+          ],
+        );
 
         // Alter the target_id field to add the appropriate AJAX handlers.
         if (isset($element['target_id'])) {
@@ -273,23 +321,7 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
           ];
         }
 
-        // Add the View Mode field.
-        // @todo: Enable #states and appropriate AJAX needed for FULL functionality.
-        // make two versions, one without states hidden, and if it's an empty
-        // field, hide the form element.
-        $element['inline_view_mode'] = array(
-          '#title' => t('View Mode'),
-          '#prefix' => '<div id="inline-view-modes-wrapper-' . $delta . '">',
-          '#suffix' => '</div>',
-          '#type' => 'select',
-          '#options' => inline_view_modes_view_mode_form_options($referenced_entity_id),
-          // @todo: Find a useful description..
-          '#default_value' => $default_value,
-          '#weight' => 10,
-          '#element_validate' => [
-            'inline_view_modes_field_widget_form_validate',
-          ],
-        );
+
       }
 
       break;
@@ -326,11 +358,17 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
  *   Form state object.
  */
 function inline_view_modes_field_widget_form_validate($element, FormStateInterface &$form_state) {
-
+  $values = $form_state->getValues();
+  $triggering_element = $form_state->getTriggeringElement();
+  // Add in custom submit handler for Inline View Modes.
   $submit_handlers = $form_state->getSubmitHandlers();
+  // Why is $submit_handlers[0] where the previous ones live??
+  // Perhaps it seems the submithandlers is set to zero when we want it without
+  // any other handlers.
+
   if (!in_array('inline_view_modes_field_widget_form_submit', $submit_handlers)) {
-    $submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
-    $form_state->setSubmitHandlers($submit_handlers);
+    //$submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
+    //$form_state->setSubmitHandlers($submit_handlers);
   }
 }
 
@@ -343,7 +381,12 @@ function inline_view_modes_field_widget_form_validate($element, FormStateInterfa
  *   Form state object.
  */
 function inline_view_modes_field_widget_form_submit($form, FormStateInterface $form_state) {
+  $values = $form_state->getValues();
 
+  $triggering_element = $form_state->getTriggeringElement();
+
+  $submit_handlers = $form_state->getSubmitHandlers();
+  $something = '';
 }
 
 /**
@@ -362,23 +405,38 @@ function inline_view_modes_field_widget_form_submit($form, FormStateInterface $f
  */
 function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface $form_state) {
   // @todo: Need some error checking/defensive coding in this callback.
+  // @todo: This is where the issue with Paragraphs / nested items failing to return the IVM field when first adding the reference.
   $triggering_element = $form_state->getTriggeringElement();
-  $delta = $triggering_element['#delta'];
-  $field = array_shift($triggering_element['#parents']);
-  $value = $form_state->getValue($field)[$delta];
+
+  // Figure out which part of the form to return.
+  $form_array_parents = $triggering_element['#array_parents'];
+  array_pop($form_array_parents);
+  $form_field = $form;
+  $target_value = [];
+  foreach ($form_array_parents AS $parent) {
+    // The form field we'll be using/returning.
+    $form_field = $form_field[$parent];
+  }
+
+  // Figure out the right value to look for in the array.
+  $values = $value = $form_state->getValues();
+  $form_value_parents = $triggering_element['#parents'];
+  foreach ($form_value_parents AS $parent) {
+    $value = $value[$parent];
+  }
   $referenced_entity_id = $value['target_id'];
 
   // Get the allowed/enabled View Modes for the specific entity.
   $allowed_view_modes = inline_view_modes_view_mode_form_options($referenced_entity_id);
   // Alter the options in the View Mode selector.
-  $form[$field]['widget'][$delta]['inline_view_mode']['#options'] = $allowed_view_modes;
+  $form_field['inline_view_mode']['#options'] = $allowed_view_modes;
 
   // Assign the previously assigned default view mode assuming the reference is
   // of the same type, thus having the same view modes available. Otherwise, we
   // need to reset it back to default.
   $default_value = isset($value['inline_view_mode']) && in_array($value['inline_view_mode'], $allowed_view_modes) ? $value['inline_view_mode'] : 'default';
-  $form[$field]['widget'][$delta]['inline_view_mode']['#default_value'] = $default_value;
-  return $form[$field]['widget'][$delta]['inline_view_mode'];
+  $form_field['inline_view_mode']['#default_value'] = $default_value;
+  return $form_field['inline_view_mode'];
 }
 
 /**
@@ -404,8 +462,12 @@ function inline_view_modes_view_mode_form_options($entity_id) {
 
   if ($entity_id) {
     // Here we have an existing item. Let's get the right view modes.
-    /** @var \Drupal\node\Entity\Node $entity */
+    // @todo: This shouldn't likely use the Node class, but the Entity parent class instead.
+    /** @var \Drupal\Core\Entity\Entity $entity */
     $entity = Node::load($entity_id);
+
+    // Somehow need to do if (is Class 'node'/'paragraph', etc.) to handle the logic.
+    $bundle = $entity->bundle();
     $entity_bundle = $entity->getType();
     $entity_type_id = $entity->getEntityTypeId();
     $entity_view_modes_by_bundle = \Drupal::entityManager()->getViewModeOptionsByBundle($entity_type_id, $entity_bundle);
@@ -453,6 +515,7 @@ function inline_view_modes_view_mode_form_options($entity_id) {
  *   - IF the TARGET entity is a Content Entity that allows/has view modes,
  *     then it should be fine to PROCEED.
  *   - IF the FIELD type is one of the ones we want, PROCEED.
+ *
  * @return bool
  *   If Inline View Modes is allowed or not.
  */
@@ -462,11 +525,8 @@ function inline_view_modes_is_allowed(FieldConfig $field) {
     'node',
     'paragraph',
   ];
-  // Perhaps target_entity_type check should only determine that the target type
-  // is of the content entity type that HAS view modes?
-  $allowed_target_entity_types = [
-    'node',
-  ];
+  // Array of content entities with view modes.
+  $allowed_target_entity_types = inline_view_modes_get_entities_with_view_modes();
   // Allowed field types capable of adding Inline View Modes functionality to.
   $allowed_field_types = [
     'entity_reference',
@@ -483,4 +543,56 @@ function inline_view_modes_is_allowed(FieldConfig $field) {
   }
   // Return FALSE if this isn't in our allowed values arrays.
   return FALSE;
+}
+
+/**
+ * Function to return an array of entity type ids that contain view modes.
+ *
+ * @return array
+ *   An array containing all content entities that register view modes, keyed
+ *   by entity_id.
+ */
+function inline_view_modes_get_entities_with_view_modes() {
+  $entity_types = \Drupal::entityManager()->getDefinitions();
+  $content_entities_with_view_modes = [];
+  foreach ($entity_types as $id => $entity_type) {
+    if ($entity_type->getGroup() == 'content') {
+      $entity_view_modes = \Drupal::entityManager()->getViewModes($id);
+      if (count($entity_view_modes) > 0) {
+        $content_entities_with_view_modes[$id] = $id;
+      }
+    }
+  }
+  return $content_entities_with_view_modes;
+}
+
+/**
+ * @param $eid Entity Id.
+ *
+ * @return array
+ */
+function inline_view_modes_get_entity_type($eid) {
+  // Entity::load() fails with error.
+  $entity = Node::load($eid);
+  $type = $entity->getEntityTypeId();
+
+  switch($type) {
+    case 'node':
+
+      // Label of the Node Type
+      $entity_label = $entity->type->entity->label();
+      // Title of the Node
+      $entity_title = $entity->label();
+
+      return [
+        'label' => $entity_label,
+        'title' => $entity_title,
+      ];
+
+      break;
+  }
+
+
+  $something = '';
+  return false;
 }
