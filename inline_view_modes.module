@@ -269,8 +269,8 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
 
         // An empty reference field has been filled out, or has been changed.
         if (isset($values[$field_name][$delta]['target_id'])) {
-            $referenced_entity_id = $values[$field_name][$delta]['target_id'];
-            $default_value = isset($values[$field_name][$delta]['inline_view_mode']) ? $values[$field_name][$delta]['inline_view_mode'] : 'default';
+          $referenced_entity_id = $values[$field_name][$delta]['target_id'];
+          $default_value = isset($values[$field_name][$delta]['inline_view_mode']) ? $values[$field_name][$delta]['inline_view_mode'] : 'default';
         }
         else {
           // @todo: When in Paragraphs, values are under [$parent_paragraph_field][$delta]['subform'][$field_name]
@@ -285,7 +285,7 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
         }
 
         $title = t('View Mode');
-        $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>'. $entity_data['label'] . '</strong></em>, <em>'. $entity_data['title'] . '</em>.') : t('Enter a reference first...');
+        $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', array('@label' => $entity_data['label'], '@title' => $entity_data['title'])) : t('Enter a reference first...');
         $field_parents = isset($element['target_id']['#field_parents']) ? $element['target_id']['#field_parents'] : [];
 
         // Add the View Mode field.
@@ -305,7 +305,7 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
           '#field_parents' => $field_parents,
           '#weight' => 10,
           '#element_validate' => [
-            //'inline_view_modes_field_widget_form_validate',
+            // 'inline_view_modes_field_widget_form_validate',
           ],
         );
 
@@ -320,8 +320,6 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
             'wrapper' => 'inline-view-modes-wrapper-' . $delta,
           ];
         }
-
-
       }
 
       break;
@@ -365,10 +363,9 @@ function inline_view_modes_field_widget_form_validate($element, FormStateInterfa
   // Why is $submit_handlers[0] where the previous ones live??
   // Perhaps it seems the submithandlers is set to zero when we want it without
   // any other handlers.
-
   if (!in_array('inline_view_modes_field_widget_form_submit', $submit_handlers)) {
-    //$submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
-    //$form_state->setSubmitHandlers($submit_handlers);
+    // $submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
+    // $form_state->setSubmitHandlers($submit_handlers);
   }
 }
 
@@ -413,7 +410,7 @@ function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface
   array_pop($form_array_parents);
   $form_field = $form;
   $target_value = [];
-  foreach ($form_array_parents AS $parent) {
+  foreach ($form_array_parents as $parent) {
     // The form field we'll be using/returning.
     $form_field = $form_field[$parent];
   }
@@ -421,7 +418,7 @@ function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface
   // Figure out the right value to look for in the array.
   $values = $value = $form_state->getValues();
   $form_value_parents = $triggering_element['#parents'];
-  foreach ($form_value_parents AS $parent) {
+  foreach ($form_value_parents as $parent) {
     $value = $value[$parent];
   }
   $referenced_entity_id = $value['target_id'];
@@ -466,7 +463,7 @@ function inline_view_modes_view_mode_form_options($entity_id) {
     /** @var \Drupal\Core\Entity\Entity $entity */
     $entity = Node::load($entity_id);
 
-    // Somehow need to do if (is Class 'node'/'paragraph', etc.) to handle the logic.
+    // Need to do if (is Class 'node'/'paragraph', etc.) to handle the logic.
     $bundle = $entity->bundle();
     $entity_bundle = $entity->getType();
     $entity_type_id = $entity->getEntityTypeId();
@@ -567,32 +564,39 @@ function inline_view_modes_get_entities_with_view_modes() {
 }
 
 /**
- * @param $eid Entity Id.
+ * Returns the entity type when supplied an entity id.
  *
- * @return array
+ * @param int $eid
+ *   Entity ID to find the entity type for.
+ *
+ * @return mixed
+ *   Array containing the following:
+ *   - label
+ *   - title
+ *   Or false.
  */
 function inline_view_modes_get_entity_type($eid) {
-  // Entity::load() fails with error.
+  // @todo: Entity::load() Needs urgent refactor/debugging.
   $entity = Node::load($eid);
   $type = $entity->getEntityTypeId();
 
-  switch($type) {
+  $entity_label = FALSE;
+  $entity_title = FALSE;
+
+  switch ($type) {
     case 'node':
-
-      // Label of the Node Type
+      // Label of the Node Type.
       $entity_label = $entity->type->entity->label();
-      // Title of the Node
+      // Title of the Node.
       $entity_title = $entity->label();
-
-      return [
-        'label' => $entity_label,
-        'title' => $entity_title,
-      ];
-
       break;
   }
 
-
-  $something = '';
-  return false;
+  if ($entity_label && $entity_title) {
+    return [
+      'label' => $entity_label,
+      'title' => $entity_title,
+    ];
+  }
+  return FALSE;
 }
