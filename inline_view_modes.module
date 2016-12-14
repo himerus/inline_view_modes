@@ -286,6 +286,7 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
 
         $title = t('View Mode');
         $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>'. $entity_data['label'] . '</strong></em>, <em>'. $entity_data['title'] . '</em>.') : t('Enter a reference first...');
+        $field_parents = isset($element['target_id']['#field_parents']) ? $element['target_id']['#field_parents'] : [];
 
         // Add the View Mode field.
         // @todo: Enable #states and appropriate AJAX needed for FULL functionality.
@@ -296,10 +297,12 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
           '#prefix' => '<div id="inline-view-modes-wrapper-' . $delta . '">',
           '#suffix' => '</div>',
           '#type' => 'select',
+          '#delta' => $delta,
           '#options' => inline_view_modes_view_mode_form_options($referenced_entity_id),
           // @todo: Find a useful description..
           '#description' => $description,
           '#default_value' => $default_value,
+          '#field_parents' => $field_parents,
           '#weight' => 10,
           '#element_validate' => [
             //'inline_view_modes_field_widget_form_validate',
@@ -402,23 +405,38 @@ function inline_view_modes_field_widget_form_submit($form, FormStateInterface $f
  */
 function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface $form_state) {
   // @todo: Need some error checking/defensive coding in this callback.
+  // @todo: This is where the issue with Paragraphs / nested items failing to return the IVM field when first adding the reference.
   $triggering_element = $form_state->getTriggeringElement();
-  $delta = $triggering_element['#delta'];
-  $field = array_shift($triggering_element['#parents']);
-  $value = $form_state->getValue($field)[$delta];
+
+  // Figure out which part of the form to return.
+  $form_array_parents = $triggering_element['#array_parents'];
+  array_pop($form_array_parents);
+  $form_field = $form;
+  $target_value = [];
+  foreach ($form_array_parents AS $parent) {
+    // The form field we'll be using/returning.
+    $form_field = $form_field[$parent];
+  }
+
+  // Figure out the right value to look for in the array.
+  $values = $value = $form_state->getValues();
+  $form_value_parents = $triggering_element['#parents'];
+  foreach ($form_value_parents AS $parent) {
+    $value = $value[$parent];
+  }
   $referenced_entity_id = $value['target_id'];
 
   // Get the allowed/enabled View Modes for the specific entity.
   $allowed_view_modes = inline_view_modes_view_mode_form_options($referenced_entity_id);
   // Alter the options in the View Mode selector.
-  $form[$field]['widget'][$delta]['inline_view_mode']['#options'] = $allowed_view_modes;
+  $form_field['inline_view_mode']['#options'] = $allowed_view_modes;
 
   // Assign the previously assigned default view mode assuming the reference is
   // of the same type, thus having the same view modes available. Otherwise, we
   // need to reset it back to default.
   $default_value = isset($value['inline_view_mode']) && in_array($value['inline_view_mode'], $allowed_view_modes) ? $value['inline_view_mode'] : 'default';
-  $form[$field]['widget'][$delta]['inline_view_mode']['#default_value'] = $default_value;
-  return $form[$field]['widget'][$delta]['inline_view_mode'];
+  $form_field['inline_view_mode']['#default_value'] = $default_value;
+  return $form_field['inline_view_mode'];
 }
 
 /**
