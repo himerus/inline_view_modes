@@ -299,13 +299,12 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
           '#type' => 'select',
           '#delta' => $delta,
           '#options' => inline_view_modes_view_mode_form_options($referenced_entity_id),
-          // @todo: Find a useful description..
           '#description' => $description,
           '#default_value' => $default_value,
           '#field_parents' => $field_parents,
           '#weight' => 10,
           '#element_validate' => [
-            // 'inline_view_modes_field_widget_form_validate',
+            'inline_view_modes_field_widget_form_validate',
           ],
         );
 
@@ -364,8 +363,8 @@ function inline_view_modes_field_widget_form_validate($element, FormStateInterfa
   // Perhaps it seems the submithandlers is set to zero when we want it without
   // any other handlers.
   if (!in_array('inline_view_modes_field_widget_form_submit', $submit_handlers)) {
-    // $submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
-    // $form_state->setSubmitHandlers($submit_handlers);
+    $submit_handlers[] = 'inline_view_modes_field_widget_form_submit';
+    $form_state->setSubmitHandlers($submit_handlers);
   }
 }
 
@@ -378,11 +377,14 @@ function inline_view_modes_field_widget_form_validate($element, FormStateInterfa
  *   Form state object.
  */
 function inline_view_modes_field_widget_form_submit($form, FormStateInterface $form_state) {
-  $values = $form_state->getValues();
-
   $triggering_element = $form_state->getTriggeringElement();
+  $submitted = $form_state->isSubmitted();
+  // Get the item that triggered the submit, and ensure it's not 'add_more'
+  $submit_item = array_pop($triggering_element['#parents']);
 
-  $submit_handlers = $form_state->getSubmitHandlers();
+  if ($submitted && $submit_item != 'add_more') {
+    $values = $form_state->getValues();
+  }
   $something = '';
 }
 
@@ -409,19 +411,18 @@ function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface
   $form_array_parents = $triggering_element['#array_parents'];
   array_pop($form_array_parents);
   $form_field = $form;
-  $target_value = [];
   foreach ($form_array_parents as $parent) {
     // The form field we'll be using/returning.
     $form_field = $form_field[$parent];
   }
 
   // Figure out the right value to look for in the array.
-  $values = $value = $form_state->getValues();
+  $target_value = $form_state->getValues();
   $form_value_parents = $triggering_element['#parents'];
   foreach ($form_value_parents as $parent) {
-    $value = $value[$parent];
+    $target_value = $target_value[$parent];
   }
-  $referenced_entity_id = $value['target_id'];
+  $referenced_entity_id = $target_value['target_id'];
 
   // Get the allowed/enabled View Modes for the specific entity.
   $allowed_view_modes = inline_view_modes_view_mode_form_options($referenced_entity_id);
@@ -431,7 +432,7 @@ function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface
   // Assign the previously assigned default view mode assuming the reference is
   // of the same type, thus having the same view modes available. Otherwise, we
   // need to reset it back to default.
-  $default_value = isset($value['inline_view_mode']) && in_array($value['inline_view_mode'], $allowed_view_modes) ? $value['inline_view_mode'] : 'default';
+  $default_value = isset($target_value['inline_view_mode']) && in_array($target_value['inline_view_mode'], $allowed_view_modes) ? $target_value['inline_view_mode'] : 'default';
   $form_field['inline_view_mode']['#default_value'] = $default_value;
   return $form_field['inline_view_mode'];
 }
