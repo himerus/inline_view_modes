@@ -24,14 +24,14 @@ class EntityReferenceIvmEntityFormatter extends EntityReferenceEntityFormatter {
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    $elements['view_mode'] = array(
+    $elements['view_mode'] = [
       '#type' => 'select',
       '#options' => $this->entityDisplayRepository->getViewModeOptions($this->getFieldSetting('target_type')),
       '#title' => t('Default View mode'),
       '#description' => t('<p>The <em>Default View Mode</em> is used when an entity reference did not specify an <em>Inline View Mode</em>. This should be used carefully and usually set to <em>Default</em> since you cannot be sure that allowed types assgined to an <em>Entity Reference</em> field has the same view modes available.</p>'),
       '#default_value' => $this->getSetting('view_mode'),
       '#required' => TRUE,
-    );
+    ];
 
     return $elements;
   }
@@ -40,11 +40,11 @@ class EntityReferenceIvmEntityFormatter extends EntityReferenceEntityFormatter {
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = array();
+    $summary = [];
 
     $view_modes = $this->entityDisplayRepository->getViewModeOptions($this->getFieldSetting('target_type'));
     $view_mode = $this->getSetting('view_mode');
-    $summary[] = t('Default View Mode: @mode', array('@mode' => isset($view_modes[$view_mode]) ? $view_modes[$view_mode] : $view_mode));
+    $summary[] = t('Default View Mode: @mode', ['@mode' => isset($view_modes[$view_mode]) ? $view_modes[$view_mode] : $view_mode]);
 
     return $summary;
   }

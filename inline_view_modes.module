@@ -18,9 +18,9 @@ use Drupal\Core\Entity\Entity;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Field\WidgetInterface;
-use \Drupal\Core\Form\FormStateInterface;
-use \Drupal\node\Entity\Node;
-use \Drupal\field\Entity\FieldConfig;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\field\Entity\FieldConfig;
 
 /**
  * Implements hook_field_info_alter().
@@ -162,23 +162,23 @@ function inline_view_modes_form_field_config_edit_form_alter(&$form, FormStateIn
   }
 
   // Add the required Inline View Modes form elements.
-  $form['inline_view_modes'] = array(
+  $form['inline_view_modes'] = [
     '#type' => 'details',
-    '#attributes' => array('class' => array('inline_view_modes')),
+    '#attributes' => ['class' => ['inline_view_modes']],
     '#description' => t('<strong>Inline View Modes</strong> allows the content creator/editor to manipulate the display of a referenced entity. When setting display settings on the <em>Manage Display</em> tab, if the <strong>Referenced Entity w/View Mode</strong> is selected, the default view mode will be used if a referenced entity fails to specify a specific view mode.</strong>'),
     '#title' => t('Inline View Modes'),
     '#weight' => -5,
     '#open' => TRUE,
     '#tree' => FALSE,
-  );
+  ];
 
-  $form['enable_inline_view_modes'] = array(
+  $form['enable_inline_view_modes'] = [
     '#type' => 'checkbox',
     '#title' => t('Enable <strong>Inline View Modes</strong> support.'),
     '#description' => t('Enable <strong>Inline View Modes</strong> for referenced entities.'),
     '#default_value' => $field->getThirdPartySetting('inline_view_modes', 'enable_inline_view_modes'),
     '#group' => 'inline_view_modes',
-  );
+  ];
 
   $form['#entity_builders'][] = 'inline_view_modes_add_enable_config';
 }
@@ -198,7 +198,7 @@ function inline_view_modes_form_field_config_edit_form_alter(&$form, FormStateIn
  * @param \Drupal\Core\Form\FormStateInterface $form_state
  *   State of current form.
  */
-function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, &$form, FormStateInterface $form_state) {
+function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, array &$form, FormStateInterface $form_state) {
 
   if ($entity_type == 'field_config') {
     if ($form_state->getValue('enable_inline_view_modes')) {
@@ -228,14 +228,13 @@ function inline_view_modes_add_enable_config($entity_type, FieldConfig $field, &
  */
 function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
   // @todo: Investigate ONLY firing on the Rendered Entity widget.
-  $base_form = $form_state->getBuildInfo()['base_form_id'];
-  $form_id = $form_state->getBuildInfo()['form_id'];
+  // $base_form = $form_state->getBuildInfo()['base_form_id'];
+  // $form_id = $form_state->getBuildInfo()['form_id'];
   /** @var \Drupal\node\NodeForm $form_object */
-  $form_object = $form_state->getFormObject();
+  // $form_object = $form_state->getFormObject();
   // Parent entity displaying the form.
   /** @var \Drupal\node\Entity\Node $node */
-  $entity = $form_object->getEntity();
-
+  // $entity = $form_object->getEntity();
   /** @var \Drupal\field\Entity\FieldConfig $field_config */
   $field_config = $context['items']->getFieldDefinition();
   $field_type = $field_config->getType();
@@ -263,7 +262,6 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
         $values = $form_state->getValues();
 
         // @todo: Getting the referenced entity ID fails in many scenarios.
-
         // Grab the Entity Id for the STORED item.
         $referenced_entity_id = isset($thisItem->getValue()['target_id']) ? $thisItem->getValue()['target_id'] : FALSE;
 
@@ -285,14 +283,14 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
         }
 
         $title = t('View Mode');
-        $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', array('@label' => $entity_data['label'], '@title' => $entity_data['title'])) : t('Enter a reference first...');
+        $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', ['@label' => $entity_data['label'], '@title' => $entity_data['title']]) : t('Enter a reference first...');
         $field_parents = isset($element['target_id']['#field_parents']) ? $element['target_id']['#field_parents'] : [];
 
         // Add the View Mode field.
         // @todo: Enable #states and appropriate AJAX needed for FULL functionality.
         // make two versions, one without states hidden, and if it's an empty
         // field, hide the form element.
-        $element['inline_view_mode'] = array(
+        $element['inline_view_mode'] = [
           '#title' => $title,
           '#prefix' => '<div id="inline-view-modes-wrapper-' . $delta . '">',
           '#suffix' => '</div>',
@@ -306,7 +304,7 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
           '#element_validate' => [
             'inline_view_modes_field_widget_form_validate',
           ],
-        );
+        ];
 
         // Alter the target_id field to add the appropriate AJAX handlers.
         if (isset($element['target_id'])) {
@@ -354,9 +352,9 @@ function inline_view_modes_field_widget_form_alter(&$element, FormStateInterface
  * @param \Drupal\Core\Form\FormStateInterface $form_state
  *   Form state object.
  */
-function inline_view_modes_field_widget_form_validate($element, FormStateInterface &$form_state) {
-  $values = $form_state->getValues();
-  $triggering_element = $form_state->getTriggeringElement();
+function inline_view_modes_field_widget_form_validate(array $element, FormStateInterface &$form_state) {
+  // $values = $form_state->getValues();
+  // $triggering_element = $form_state->getTriggeringElement();
   // Add in custom submit handler for Inline View Modes.
   $submit_handlers = $form_state->getSubmitHandlers();
   // Why is $submit_handlers[0] where the previous ones live??
@@ -376,16 +374,15 @@ function inline_view_modes_field_widget_form_validate($element, FormStateInterfa
  * @param \Drupal\Core\Form\FormStateInterface $form_state
  *   Form state object.
  */
-function inline_view_modes_field_widget_form_submit($form, FormStateInterface $form_state) {
+function inline_view_modes_field_widget_form_submit(array $form, FormStateInterface $form_state) {
   $triggering_element = $form_state->getTriggeringElement();
   $submitted = $form_state->isSubmitted();
-  // Get the item that triggered the submit, and ensure it's not 'add_more'
+  // Get the item that triggered the submit, and ensure it's not 'add_more'.
   $submit_item = array_pop($triggering_element['#parents']);
 
   if ($submitted && $submit_item != 'add_more') {
-    $values = $form_state->getValues();
+    // $values = $form_state->getValues();
   }
-  $something = '';
 }
 
 /**
@@ -402,7 +399,7 @@ function inline_view_modes_field_widget_form_submit($form, FormStateInterface $f
  * @return mixed
  *   Returns appropriate portion of $form to rebuild via AJAX.
  */
-function inline_view_mode_widget_autocomplete_callback($form, FormStateInterface $form_state) {
+function inline_view_mode_widget_autocomplete_callback(array $form, FormStateInterface $form_state) {
   // @todo: Need some error checking/defensive coding in this callback.
   // @todo: This is where the issue with Paragraphs / nested items failing to return the IVM field when first adding the reference.
   $triggering_element = $form_state->getTriggeringElement();
@@ -465,7 +462,7 @@ function inline_view_modes_view_mode_form_options($entity_id) {
     $entity = Node::load($entity_id);
 
     // Need to do if (is Class 'node'/'paragraph', etc.) to handle the logic.
-    $bundle = $entity->bundle();
+    // $bundle = $entity->bundle();
     $entity_bundle = $entity->getType();
     $entity_type_id = $entity->getEntityTypeId();
     $entity_view_modes_by_bundle = \Drupal::entityManager()->getViewModeOptionsByBundle($entity_type_id, $entity_bundle);
