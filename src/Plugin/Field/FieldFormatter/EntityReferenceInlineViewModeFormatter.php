@@ -37,6 +37,12 @@ class EntityReferenceInlineViewModeFormatter extends EntityReferenceEntityFormat
       if ($values[$delta]['view_mode']) {
         $elements[$delta]['#view_mode'] = $values[$delta]['view_mode'];
       }
+
+      // Reset/update the cache tags.
+      if (isset($elements[$delta]['#cache']['tags'])) {
+        $elements[$delta]['#cache']['tags'][] = $values[$delta]['view_mode'];
+        $elements[$delta]['#cache']['keys'][] = $values[$delta]['view_mode'];
+      }
     }
 
     return $elements;

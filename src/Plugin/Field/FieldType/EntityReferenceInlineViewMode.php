@@ -14,7 +14,7 @@ use Drupal\Core\TypedData\DataDefinition;
  *
  * @FieldType(
  *   id = "entity_reference_inline_view_mode",
- *   label = @Translation("Content w/Custom View Mode"),
+ *   label = @Translation("Entity Reference w/Custom View Mode"),
  *   description = @Translation("An entity field containing an entity reference with a custom view mode selection option."),
  *   category = @Translation("Reference"),
  *   default_widget = "entity_reference_autocomplete_view_mode",

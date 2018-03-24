@@ -29,9 +29,25 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
 
   /**
    * {@inheritdoc}
+   *
+   * @todo: Not working with Unlimited value fields.
+   * This is working WELL with reference fields with a single value.
+   * This also includes a paragraph that has unlimited instances, embedding a
+   * reference that is single value. In the test instance (NodeMaker Paragraphs)
+   * The Entity Content paragraph allows a single value to be added, yet you can
+   * add the paragraph an unlimited amount of times, so the render tree is
+   * somehow unique enough to not cause issue.
+   *
+   * If there is an unlimited value reference field, then it works on the first
+   * call to fill out the View Mode form, but if you "Add Another", you get an
+   * illegal choice detected error on the original field's View Mode field, and
+   * the field is reset, with only 'default' as a choice.
+   *
    */
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
     $widget = parent::formElement($items, $delta, $element, $form, $form_state);
+
+    $values = $form_state->getValues();
 
     $referenced_entity_id = isset($items[$delta]) ? $items[$delta]->target_id : FALSE;
     $options = $this->getFormOptions($referenced_entity_id);
@@ -39,12 +55,15 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
     $parents = implode('-', $element['#field_parents']);
     $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
 
+    $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
+
     $widget['view_mode'] = [
       '#title' => $this->t('View Mode'),
       '#type' => 'select',
-      '#default_value' => isset($items[$delta]) ? $items[$delta]->view_mode : 'default',
+      '#default_value' => $default_view_mode,
       '#options' => $options,
-      '#min' => 1,
+      '#min' => 1 ,
+      // '#validated' => 'true',
       '#weight' => 10,
       '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
       '#suffix' => '</div>',
@@ -151,7 +170,7 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
     $response = new AjaxResponse();
     $response->addCommand(new ReplaceCommand(
       '#view-mode-selector--delta-' . $class,
-      '<div id="view-mode-selector--delta-' . $class . '">' . \Drupal::service('renderer')->render($form_field['view_mode']) . '</div>')
+      \Drupal::service('renderer')->render($form_field['view_mode']))
     );
 
     return $response;
@@ -195,8 +214,8 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
     // Perhaps it seems the submithandlers is set to zero when we want
     // it without any other handlers.
     if (!in_array('viewModeSubmit', $submit_handlers)) {
-      $submit_handlers[] = [get_class(self), 'viewModeSubmit'];
-      $form_state->setSubmitHandlers($submit_handlers);
+      // $submit_handlers[] = 'viewModeSubmit';
+      // $form_state->setSubmitHandlers($submit_handlers);
     }
   }
 
