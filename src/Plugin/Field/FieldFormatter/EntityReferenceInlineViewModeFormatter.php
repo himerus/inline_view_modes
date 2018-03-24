@@ -2,23 +2,45 @@
 
 namespace Drupal\inline_view_modes\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldFormatter\EntityReferenceEntityFormatter;
 use Drupal\Core\Form\FormStateInterface;
 
 /**
- * Plugin implementation of the 'entity reference rendered entity' formatter.
+ * Class EntityReferenceInlineViewModeFormatter.
+ *
+ * @package Drupal\inline_view_modes\Plugin\Field\FieldFormatter
  *
  * @FieldFormatter(
- *   id = "entity_reference_ivm_entity_formatter",
- *   label = @Translation("Rendered entity w/View Mode"),
- *   description = @Translation("Display the referenced entities rendered by entity_view()."),
+ *   id = "entity_reference_view_mode_view",
+ *   label = @Translation("Rendered Entity w/Custom View Mode"),
+ *   description = @Translation("Display the entity with the selected view mode."),
  *   field_types = {
- *     "entity_reference",
- *     "entity_reference_revisions",
+ *     "entity_reference_inline_view_mode"
  *   }
  * )
+ *
+ * @see https://www.lullabot.com/articles/extending-a-field-type-in-drupal-8
  */
-class EntityReferenceIvmEntityFormatter extends EntityReferenceEntityFormatter {
+class EntityReferenceInlineViewModeFormatter extends EntityReferenceEntityFormatter {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function viewElements(FieldItemListInterface $items, $langcode) {
+    $elements = parent::viewElements($items, $langcode);
+    $values = $items->getValue();
+
+    // This 'should' work for an unlimited value field.
+    foreach ($elements as $delta => $entity) {
+      // Set the View Mode based on the value from the field.
+      if ($values[$delta]['view_mode']) {
+        $elements[$delta]['#view_mode'] = $values[$delta]['view_mode'];
+      }
+    }
+
+    return $elements;
+  }
 
   /**
    * {@inheritdoc}
