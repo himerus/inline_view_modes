@@ -103,4 +103,48 @@ class InlineViewModeHelpers {
     return $content_entities_with_view_modes;
   }
 
+  /**
+   * Returns the entity labels.
+   *
+   * @param string $type
+   *   The entity type id.
+   * @param int $eid
+   *   Entity ID to find the entity type for.
+   *
+   * @return mixed
+   *   Array containing the following:
+   *   - label
+   *   - title
+   *   Or false.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   */
+  public static function returnEntityLabels($type, $eid) {
+    // @todo: Entity::load() Needs urgent refactor/debugging.
+    $entityController = \Drupal::entityTypeManager()->getStorage($type);
+    $entity = $entityController->load($eid);
+
+    $type = $entity->getEntityTypeId();
+
+    $entity_label = FALSE;
+    $entity_title = FALSE;
+
+    switch ($type) {
+      case 'node':
+        // Label of the Node Type.
+        $entity_label = $entity->type->entity->label();
+        // Title of the Node.
+        $entity_title = $entity->label();
+        break;
+    }
+
+    if ($entity_label && $entity_title) {
+      return [
+        'label' => $entity_label,
+        'title' => $entity_title,
+      ];
+    }
+    return FALSE;
+  }
+
 }

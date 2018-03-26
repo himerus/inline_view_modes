@@ -8,6 +8,8 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldWidget\EntityReferenceAutocompleteWidget;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\inline_view_modes\Helpers\InlineViewModeHelpers;
+use User;
 
 /**
  * Class EntityReferenceAutocompleteViewMode.
@@ -42,42 +44,49 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
    * call to fill out the View Mode form, but if you "Add Another", you get an
    * illegal choice detected error on the original field's View Mode field, and
    * the field is reset, with only 'default' as a choice.
-   *
    */
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
     $widget = parent::formElement($items, $delta, $element, $form, $form_state);
+    // Check to see if the current user has permissions to alter the View Modes.
+    $permission = \Drupal::currentUser()->hasPermission('use inline view modes');
+    if ($permission) {
+      $referenced_entity_id = isset($items[$delta]) ? $items[$delta]->target_id : FALSE;
+      $options = $this->getFormOptions($referenced_entity_id);
 
-    $values = $form_state->getValues();
+      $parents = implode('-', $element['#field_parents']);
+      $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
 
-    $referenced_entity_id = isset($items[$delta]) ? $items[$delta]->target_id : FALSE;
-    $options = $this->getFormOptions($referenced_entity_id);
+      $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
+      $target_entity_type = $widget['target_id']['#target_type'];
 
-    $parents = implode('-', $element['#field_parents']);
-    $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
+      if ($target_entity_type && $referenced_entity_id) {
+        $entity_data = InlineViewModeHelpers::returnEntityLabels($target_entity_type, $referenced_entity_id);
+      }
 
-    $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
+      $description = isset($entity_data) ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', ['@label' => $entity_data['label'], '@title' => $entity_data['title']]) : t('Enter a reference first...');
 
-    $widget['view_mode'] = [
-      '#title' => $this->t('View Mode'),
-      '#type' => 'select',
-      '#default_value' => $default_view_mode,
-      '#options' => $options,
-      '#min' => 1 ,
-      // '#validated' => 'true',
-      '#weight' => 10,
-      '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
-      '#suffix' => '</div>',
-      '#element_validate' => [
-        [get_class($this), 'viewModeValidate'],
-      ],
-    ];
-
-    // Alter the target_id field to add the appropriate AJAX handlers.
-    if (isset($widget['target_id'])) {
-      $widget['target_id']['#ajax'] = [
-        'event' => 'autocompleteclose',
-        'callback' => [get_class($this), 'autocompleteCallback'],
+      $widget['view_mode'] = [
+        '#title' => $this->t('View Mode'),
+        '#type' => 'select',
+        '#default_value' => $default_view_mode,
+        '#options' => $options,
+        '#min' => 1 ,
+        '#weight' => 10,
+        '#description' => $description,
+        '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
+        '#suffix' => '</div>',
+        '#element_validate' => [
+          [get_class($this), 'viewModeValidate'],
+        ],
       ];
+
+      // Alter the target_id field to add the appropriate AJAX handlers.
+      if (isset($widget['target_id'])) {
+        $widget['target_id']['#ajax'] = [
+          'event' => 'autocompleteclose',
+          'callback' => [get_class($this), 'autocompleteCallback'],
+        ];
+      }
     }
 
     return $widget;
