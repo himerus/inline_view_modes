@@ -8,6 +8,7 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldWidget\EntityReferenceAutocompleteWidget;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\inline_view_modes\Helpers\InlineViewModeHelpers;
 
 /**
  * Class EntityReferenceAutocompleteViewMode.
@@ -56,6 +57,13 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
     $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
 
     $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
+    $target_entity_type = $widget['target_id']['#target_type'];
+
+    if ($target_entity_type && $referenced_entity_id) {
+      $entity_data = InlineViewModeHelpers::returnEntityLabels($target_entity_type, $referenced_entity_id);
+    }
+
+    $description = $entity_data ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', ['@label' => $entity_data['label'], '@title' => $entity_data['title']]) : t('Enter a reference first...');
 
     $widget['view_mode'] = [
       '#title' => $this->t('View Mode'),
@@ -65,6 +73,7 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
       '#min' => 1 ,
       // '#validated' => 'true',
       '#weight' => 10,
+      '#description' => $description,
       '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
       '#suffix' => '</div>',
       '#element_validate' => [
