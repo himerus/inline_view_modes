@@ -2,9 +2,7 @@
 
 namespace Drupal\inline_view_modes\Helpers;
 
-use Drupal\Core\Entity\Entity;
 use Drupal\field\Entity\FieldConfig;
-use Drupal\node\Entity\Node;
 
 /**
  * ThemeBuilder declares methods used to build a new subtheme.
@@ -108,6 +106,8 @@ class InlineViewModeHelpers {
   /**
    * Returns the entity labels.
    *
+   * @param string $type
+   *   The entity type id.
    * @param int $eid
    *   Entity ID to find the entity type for.
    *
@@ -116,6 +116,8 @@ class InlineViewModeHelpers {
    *   - label
    *   - title
    *   Or false.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    */
   public static function returnEntityLabels($type, $eid) {
     // @todo: Entity::load() Needs urgent refactor/debugging.
@@ -144,4 +146,5 @@ class InlineViewModeHelpers {
     }
     return FALSE;
   }
+
 }
