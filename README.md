@@ -20,8 +20,6 @@ So the problem exists that you could be referencing two node types that don't sh
 ## Field Configuration Options
 Provides functionality to add ThirdPartySetting to appropriate fields for enabling or disabling Inline View Modes on an entity.
 
-![alt text][ivm-field-config]
-
 The field configuration is handled via the `inline_view_modes_form_field_config_edit_form_alter()` function.
 
 The storage of the configuration is handled via `inline_view_modes_add_enable_config()`.
@@ -30,10 +28,7 @@ The storage of the configuration is handled via `inline_view_modes_add_enable_co
 #### Enable View mode selection PER reference
 > Each referenced entity in a multiple value field can select a different view mode.
 
-![alt text][ivm-form-selects]
-
 **Status:** _In progress_.
-
 
 #### Enable View mode selection PER field.
 **Status:** _To be developed_.
@@ -61,5 +56,5 @@ In order to handle the full adjustments needed to the FieldFormatter for **Rende
 
 ## Modules to integrate
 * Drupal Core Entity Reference fields. **Status:** _In progress_.
-* [Entity Reference Revisions](https://www.drupal.org/project/entity_reference_revisions) **Status:** _In progress_.
+* [Entity Reference Revisions](https://www.drupal.org/project/entity_reference_revisions) **Status:** _To be developed_.
 * [Inline Entity Form](https://www.drupal.org/project/inline_entity_form) **Status:** _To be developed_.
