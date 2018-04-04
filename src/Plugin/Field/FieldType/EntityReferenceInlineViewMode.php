@@ -45,9 +45,9 @@ class EntityReferenceInlineViewMode extends EntityReferenceItem {
     $schema = parent::schema($field_definition);
     $schema['columns']['view_mode'] = [
       'type' => 'varchar',
+      'description' => 'A custom view mode assigned to the reference, allowing it to be displayed as desired by content editors.',
       'length' => 255,
-      'not null' => TRUE,
-      'default' => '',
+      'not null' => FALSE,
     ];
 
     return $schema;
