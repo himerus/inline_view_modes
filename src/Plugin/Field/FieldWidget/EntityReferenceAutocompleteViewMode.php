@@ -9,7 +9,6 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldWidget\EntityReferenceAutocompleteWidget;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\inline_view_modes\Helpers\InlineViewModeHelpers;
-use User;
 
 /**
  * Class EntityReferenceAutocompleteViewMode.

@@ -1,0 +1,10 @@
+field.formatter.settings.entity_reference_view_mode_view:
+  type: mapping
+  label: 'Inline View Modes default view modes for all entity bundles.'
+  mapping:
+    default_view_modes:
+      type: blob
+      not null: false
+      size: big
+      serialize: true
+      label: 'Default View Modes'
