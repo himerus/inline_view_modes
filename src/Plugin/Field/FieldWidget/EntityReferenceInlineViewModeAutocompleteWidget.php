@@ -11,12 +11,12 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\inline_view_modes\Helpers\InlineViewModeHelpers;
 
 /**
- * Class EntityReferenceAutocompleteViewMode.
+ * Class EntityReferenceInlineViewModeAutocompleteWidget.
  *
  * @package Drupal\inline_view_modes\Plugin\Field\FieldWidget
  *
  * @FieldWidget(
- *   id = "entity_reference_autocomplete_view_mode",
+ *   id = "entity_reference_inline_view_mode_autocomplete_widget",
  *   label = @Translation("Autocomplete w/View Mode"),
  *   description = @Translation("An autocomplete text field with an associated view mode."),
  *   field_types = {
@@ -26,7 +26,7 @@ use Drupal\inline_view_modes\Helpers\InlineViewModeHelpers;
  *
  * @see https://www.lullabot.com/articles/extending-a-field-type-in-drupal-8
  */
-class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWidget {
+class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAutocompleteWidget {
 
   /**
    * {@inheritdoc}
@@ -55,6 +55,15 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
       $parents = implode('-', $element['#field_parents']);
       $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
 
+      // @todo: Figure out the defaults from the ViewModeFormatter.
+      /** @var \Drupal\field\Entity\FieldConfig $fieldDefinition */
+      $fieldDefinition = $this->fieldDefinition;
+
+      $defaults = $this->getSetting('default_view_modes');
+
+      $fieldType = $fieldDefinition->getType();
+      $fieldId = $fieldDefinition->id();
+
       $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
       $target_entity_type = $widget['target_id']['#target_type'];
 
@@ -74,9 +83,9 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
         '#description' => $description,
         '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
         '#suffix' => '</div>',
-        '#element_validate' => [
-          [get_class($this), 'viewModeValidate'],
-        ],
+//        '#element_validate' => [
+//          [get_class($this), 'viewModeValidate'],
+//        ],
       ];
 
       // Alter the target_id field to add the appropriate AJAX handlers.
@@ -213,7 +222,7 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   Form state object.
    */
-  public static function viewModeValidate(array $element, FormStateInterface &$form_state) {
+  public function viewModeValidate(array $element, FormStateInterface &$form_state) {
     // $values = $form_state->getValues();
     // $triggering_element = $form_state->getTriggeringElement();
     // Add in custom submit handler for Inline View Modes.
@@ -222,7 +231,8 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
     // Perhaps it seems the submithandlers is set to zero when we want
     // it without any other handlers.
     if (!in_array('viewModeSubmit', $submit_handlers)) {
-      // $submit_handlers[] = 'viewModeSubmit';
+      // $class = get_class('::');
+      // $submit_handlers[] = [$class, 'viewModeSubmit'];
       // $form_state->setSubmitHandlers($submit_handlers);
     }
   }
@@ -235,14 +245,23 @@ class EntityReferenceAutocompleteViewMode extends EntityReferenceAutocompleteWid
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   Form state object.
    */
-  public static function viewModeSubmit(array $form, FormStateInterface $form_state) {
+  public function viewModeSubmit(array $form, FormStateInterface $form_state) {
     $triggering_element = $form_state->getTriggeringElement();
     $submitted = $form_state->isSubmitted();
     // Get the item that triggered the submit, and ensure it's not 'add_more'.
     $submit_item = array_pop($triggering_element['#parents']);
 
+
     if ($submitted && $submit_item != 'add_more') {
       // $values = $form_state->getValues();
+      $permission = \Drupal::currentUser()->hasPermission('use inline view modes');
+      if ($permission) {
+
+        $something = '';
+      }
+    }
+    else {
+      $something = '';
     }
   }
 
