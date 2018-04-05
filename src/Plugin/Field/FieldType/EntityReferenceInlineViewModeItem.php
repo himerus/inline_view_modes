@@ -84,11 +84,7 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
   public function fieldSettingsForm(array $form, FormStateInterface $form_state) {
     $elements = [];
     // @todo: Change this to load all the possible options and hide/show via states.
-
-
-    $targets = $this->getSetting('handler_settings')['target_bundles'];
     $bundle = $this->getSetting('target_type');
-
     $types = \Drupal::entityManager()->getBundleInfo($bundle);
 
     $modes = [];
@@ -118,6 +114,9 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
       $modes[$target_id] = $entity_type_view_modes;
 
       $defaults = $this->getSetting('default_view_modes');
+
+      // $coorespondingCheckbox = 'edit-settings-handler-settings-target-bundles-' . str_replace('_', '-', $target_id);
+
       $elements['default_view_modes'][$target_id] = [
         '#type' => 'select',
         '#options' => $entity_type_view_modes,
@@ -126,6 +125,12 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
         '#default_value' => isset($defaults[$target_id]) ? $defaults[$target_id] : 'default',
         '#description' => t('Default View Mode for the <em>@label</em> content type.', ['@label' => $target_label]),
         '#required' => TRUE,
+        '#states' => [
+          'visible' => [
+            // ':input[id="' . $coorespondingCheckbox . '"]' => ['checked' => TRUE],
+            ':input[name="settings[handler_settings][target_bundles][' . $target_id . ']"]' => ['checked' => TRUE],
+          ]
+        ],
       ];
     }
 
