@@ -1,4 +1,4 @@
-field.formatter.settings.entity_reference_view_mode_view:
+field.field_settings.entity_reference_inline_view_mode:
   type: mapping
   label: 'Inline View Modes default view modes for all entity bundles.'
   mapping:
