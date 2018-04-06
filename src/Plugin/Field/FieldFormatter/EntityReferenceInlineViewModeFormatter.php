@@ -2,6 +2,7 @@
 
 namespace Drupal\inline_view_modes\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldFormatter\EntityReferenceEntityFormatter;
 use Drupal\Core\Form\FormStateInterface;
@@ -48,4 +49,35 @@ class EntityReferenceInlineViewModeFormatter extends EntityReferenceEntityFormat
     return $elements;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public static function defaultSettings() {
+    return [];
+  }
+  /**
+   * {@inheritdoc}
+   *
+   * Used to reset the default and remove the default View Mode selection
+   * for the Entity Reference fields.
+   */
+  public function settingsForm(array $form, FormStateInterface $form_state) {
+    $elements = [];
+
+    $elements['inline_view_modes_info'] = [
+      '#type' => 'markup',
+      '#markup' => t('<p>The settings for Inline View Modes is found on the field instance settings (Manage Fields) rather than the display settings.</p>'),
+    ];
+
+    return $elements;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function settingsSummary() {
+    $summary = [];
+    $summary[] = t('Default View Mode settings available on <strong>Manage Fields</strong>');
+    return $summary;
+  }
 }

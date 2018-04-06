@@ -48,54 +48,56 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
     $widget = parent::formElement($items, $delta, $element, $form, $form_state);
     // Check to see if the current user has permissions to alter the View Modes.
     $permission = \Drupal::currentUser()->hasPermission('use inline view modes');
-    if ($permission) {
-      $referenced_entity_id = isset($items[$delta]) ? $items[$delta]->target_id : FALSE;
-      $options = $this->getFormOptions($referenced_entity_id);
 
-      $parents = implode('-', $element['#field_parents']);
-      $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
+    $referenced_entity_id = isset($items[$delta]) ? $items[$delta]->target_id : FALSE;
+    $options = $this->getFormOptions($referenced_entity_id);
 
-      // @todo: Figure out the defaults from the ViewModeFormatter.
-      /** @var \Drupal\field\Entity\FieldConfig $fieldDefinition */
-      $fieldDefinition = $this->fieldDefinition;
+    $parents = implode('-', $element['#field_parents']);
+    $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
 
-      $defaults = $this->getSetting('default_view_modes');
+    // @todo: Figure out the defaults from the ViewModeFormatter.
+    /** @var \Drupal\field\Entity\FieldConfig $fieldDefinition */
+    $fieldDefinition = $this->fieldDefinition;
 
-      $fieldType = $fieldDefinition->getType();
-      $fieldId = $fieldDefinition->id();
+    $defaults = $this->getSetting('default_view_modes');
 
-      $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
-      $target_entity_type = $widget['target_id']['#target_type'];
+    $fieldType = $fieldDefinition->getType();
+    $fieldId = $fieldDefinition->id();
 
-      if ($target_entity_type && $referenced_entity_id) {
-        $entity_data = InlineViewModeHelpers::returnEntityLabels($target_entity_type, $referenced_entity_id);
-      }
+    $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
+    $target_entity_type = $widget['target_id']['#target_type'];
 
-      $description = isset($entity_data) ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', ['@label' => $entity_data['label'], '@title' => $entity_data['title']]) : t('Enter a reference first...');
-
-      $widget['view_mode'] = [
-        '#title' => $this->t('View Mode'),
-        '#type' => 'select',
-        '#default_value' => $default_view_mode,
-        '#options' => $options,
-        '#min' => 1 ,
-        '#weight' => 10,
-        '#description' => $description,
-        '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
-        '#suffix' => '</div>',
-//        '#element_validate' => [
-//          [get_class($this), 'viewModeValidate'],
-//        ],
-      ];
-
-      // Alter the target_id field to add the appropriate AJAX handlers.
-      if (isset($widget['target_id'])) {
-        $widget['target_id']['#ajax'] = [
-          'event' => 'autocompleteclose',
-          'callback' => [get_class($this), 'autocompleteCallback'],
-        ];
-      }
+    if ($target_entity_type && $referenced_entity_id) {
+      $entity_data = InlineViewModeHelpers::returnEntityLabels($target_entity_type, $referenced_entity_id);
     }
+
+    $description = isset($entity_data) ? t('Select the appropriate View Mode for the referenced <em><strong>@label</strong></em>, <em>@title</em>.', ['@label' => $entity_data['label'], '@title' => $entity_data['title']]) : t('Enter a reference first...');
+
+    $widget['view_mode'] = [
+      '#title' => $this->t('View Mode'),
+      '#type' => 'select',
+      '#default_value' => $default_view_mode,
+      '#options' => $options,
+      '#min' => 1 ,
+      '#weight' => 10,
+      '#access' => $permission ? TRUE : FALSE,
+      '#description' => $description,
+      '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
+      '#suffix' => '</div>',
+      //'#element_validate' => [
+        // [get_class($this), 'viewModeValidate'],
+      // ],
+    ];
+
+    // Alter the target_id field to add the appropriate AJAX handlers.
+    if (isset($widget['target_id'])) {
+      $widget['target_id']['#ajax'] = [
+        'event' => 'autocompleteclose',
+        'wrapper' => 'view-mode-selector--delta-' . $class,
+        'callback' => [get_class($this), 'autocompleteCallback'],
+      ];
+    }
+
 
     return $widget;
   }
@@ -155,6 +157,11 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
    *   Returns appropriate portion of $form to rebuild via AJAX.
    *
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   *
+   * @todo: Figure out why the AJAX is just wonky.
+   * This could solve both the issue of $this not being in context to grab the
+   * field settings, but could also solve the issue of it not working via
+   * anything other than our non-unlimited value setup.
    */
   public function autocompleteCallback(array $form, FormStateInterface $form_state) {
     // @todo: Need some error checking/defensive coding in this callback.
@@ -182,15 +189,7 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
     $default_value = 'default';
     $form_field['view_mode']['#default_value'] = $default_value;
 
-    $parents = implode('-', $triggering_element['#field_parents']);
-    $class = strlen($parents) > 0 ? $parents . '-' . $triggering_element['#delta'] : $triggering_element['#delta'];
-    $response = new AjaxResponse();
-    $response->addCommand(new ReplaceCommand(
-      '#view-mode-selector--delta-' . $class,
-      \Drupal::service('renderer')->render($form_field['view_mode']))
-    );
-
-    return $response;
+    return $form_field['view_mode'];
   }
 
   /**
@@ -223,18 +222,7 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
    *   Form state object.
    */
   public function viewModeValidate(array $element, FormStateInterface &$form_state) {
-    // $values = $form_state->getValues();
-    // $triggering_element = $form_state->getTriggeringElement();
-    // Add in custom submit handler for Inline View Modes.
-    $submit_handlers = $form_state->getSubmitHandlers();
-    // Why is $submit_handlers[0] where the previous ones live??
-    // Perhaps it seems the submithandlers is set to zero when we want
-    // it without any other handlers.
-    if (!in_array('viewModeSubmit', $submit_handlers)) {
-      // $class = get_class('::');
-      // $submit_handlers[] = [$class, 'viewModeSubmit'];
-      // $form_state->setSubmitHandlers($submit_handlers);
-    }
+
   }
 
   /**
@@ -246,23 +234,7 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
    *   Form state object.
    */
   public function viewModeSubmit(array $form, FormStateInterface $form_state) {
-    $triggering_element = $form_state->getTriggeringElement();
-    $submitted = $form_state->isSubmitted();
-    // Get the item that triggered the submit, and ensure it's not 'add_more'.
-    $submit_item = array_pop($triggering_element['#parents']);
 
-
-    if ($submitted && $submit_item != 'add_more') {
-      // $values = $form_state->getValues();
-      $permission = \Drupal::currentUser()->hasPermission('use inline view modes');
-      if ($permission) {
-
-        $something = '';
-      }
-    }
-    else {
-      $something = '';
-    }
   }
 
 }
