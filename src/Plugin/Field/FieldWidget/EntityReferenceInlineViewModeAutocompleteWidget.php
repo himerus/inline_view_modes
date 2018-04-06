@@ -3,8 +3,6 @@
 namespace Drupal\inline_view_modes\Plugin\Field\FieldWidget;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldWidget\EntityReferenceAutocompleteWidget;
 use Drupal\Core\Form\FormStateInterface;
@@ -55,15 +53,6 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
     $parents = implode('-', $element['#field_parents']);
     $class = strlen($parents) > 0 ? $parents . '-' . $delta : $delta;
 
-    // @todo: Figure out the defaults from the ViewModeFormatter.
-    /** @var \Drupal\field\Entity\FieldConfig $fieldDefinition */
-    $fieldDefinition = $this->fieldDefinition;
-
-    $defaults = $this->getSetting('default_view_modes');
-
-    $fieldType = $fieldDefinition->getType();
-    $fieldId = $fieldDefinition->id();
-
     $default_view_mode = isset($items[$delta]) ? $items[$delta]->view_mode : 'default';
     $target_entity_type = $widget['target_id']['#target_type'];
 
@@ -84,9 +73,6 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
       '#description' => $description,
       '#prefix' => '<div id="view-mode-selector--delta-' . $class . '">',
       '#suffix' => '</div>',
-      //'#element_validate' => [
-        // [get_class($this), 'viewModeValidate'],
-      // ],
     ];
 
     // Alter the target_id field to add the appropriate AJAX handlers.
@@ -97,7 +83,6 @@ class EntityReferenceInlineViewModeAutocompleteWidget extends EntityReferenceAut
         'callback' => [get_class($this), 'autocompleteCallback'],
       ];
     }
-
 
     return $widget;
   }
