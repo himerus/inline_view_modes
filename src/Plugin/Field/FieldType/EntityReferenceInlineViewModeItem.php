@@ -77,17 +77,18 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
    */
   public static function defaultFieldSettings() {
     return [
-        'default_view_modes' => []
-      ] + parent::defaultFieldSettings();
+      'default_view_modes' => [],
+    ] + parent::defaultFieldSettings();
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function fieldSettingsForm(array $form, FormStateInterface $form_state) {
     $elements = [];
     // @todo: Change this to load all the possible options and hide/show via states.
     $bundle = $this->getSetting('target_type');
     $types = \Drupal::entityManager()->getBundleInfo($bundle);
-
-    $modes = [];
 
     $elements['inline_view_modes'] = [
       '#type' => 'details',
@@ -100,7 +101,7 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
     $elements['inline_view_modes']['dvm_description'] = [
       '#type' => 'markup',
       '#group' => 'inline_view_modes',
-      '#markup' => t('<p>The <em>Default View Mode</em> is used when an entity reference does not specify an <em>Inline View Mode</em> on the reference. <br />For each allowed target entity type below, you can specify a specific view mode to be used as the default.<br />This will also apply if a users role doesn\'t allow them access to edit the <em>Inline View Modes</em>.</p>'),
+      '#markup' => t("<p>The <em>Default View Mode</em> is used when an entity reference does not specify an <em>Inline View Mode</em> on the reference. <br />For each allowed target entity type below, you can specify a specific view mode to be used as the default.<br />This will also apply if a users role doesn't allow them access to edit the <em>Inline View Modes</em>.</p>"),
     ];
 
     $elements['default_view_modes'] = [
@@ -111,11 +112,8 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
     foreach ($types as $target_id => $target_label) {
       $target_label = $target_label['label'];
       $entity_type_view_modes = \Drupal::service('entity_display.repository')->getViewModeOptionsByBundle($bundle, $target_id);
-      $modes[$target_id] = $entity_type_view_modes;
 
       $defaults = $this->getSetting('default_view_modes');
-
-      // $coorespondingCheckbox = 'edit-settings-handler-settings-target-bundles-' . str_replace('_', '-', $target_id);
 
       $elements['default_view_modes'][$target_id] = [
         '#type' => 'select',
@@ -127,13 +125,13 @@ class EntityReferenceInlineViewModeItem extends EntityReferenceItem {
         '#required' => TRUE,
         '#states' => [
           'visible' => [
-            // ':input[id="' . $coorespondingCheckbox . '"]' => ['checked' => TRUE],
             ':input[name="settings[handler_settings][target_bundles][' . $target_id . ']"]' => ['checked' => TRUE],
-          ]
+          ],
         ],
       ];
     }
 
     return $elements + parent::fieldSettingsForm($form, $form_state);
   }
+
 }

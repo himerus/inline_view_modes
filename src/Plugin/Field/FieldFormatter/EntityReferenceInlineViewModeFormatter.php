@@ -2,7 +2,6 @@
 
 namespace Drupal\inline_view_modes\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldFormatter\EntityReferenceEntityFormatter;
 use Drupal\Core\Form\FormStateInterface;
@@ -55,6 +54,7 @@ class EntityReferenceInlineViewModeFormatter extends EntityReferenceEntityFormat
   public static function defaultSettings() {
     return [];
   }
+
   /**
    * {@inheritdoc}
    *
@@ -80,4 +80,5 @@ class EntityReferenceInlineViewModeFormatter extends EntityReferenceEntityFormat
     $summary[] = t('Default View Mode settings available on <strong>Manage Fields</strong>');
     return $summary;
   }
+
 }
